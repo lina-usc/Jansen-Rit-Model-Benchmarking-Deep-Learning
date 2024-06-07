@@ -43,7 +43,7 @@ pip install -r requirements.txt
 
 # Usage
 ```
-    1) Dataset Simulation:
+1) Dataset Simulation:
         Run DCM_for_JR_all_varied_11_May.ipynb to generate the datasets.
 ```
 
@@ -64,8 +64,8 @@ pip install -r requirements.txt
                            method=method, N=N, noise=noise, noise_cov=noise_cov, 
                            base_path=base_path)
 ```
-```    
-    3)  Deep Learning Analysis:
+```
+3)  Deep Learning Analysis:
         Execute deeplearning_all_noise.ipynb to apply the bi-LSTM model. Use generated files to load in the jupyter notebook. 
 ```
 

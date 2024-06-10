@@ -82,3 +82,14 @@ This project is released under the MIT License.
 # Contact
 
 For questions or further discussion, open an issue in the repository or contact me directly at [dtiwani@mailbox.sc.edu].
+
+# Cite
+
+```
+@inproceedings{Tilwani2024BenchmarkingDJ,
+  title={Benchmarking Deep Jansen-Rit Parameter Inference: An in Silico Study},
+  author={Deepa Tilwani and Christian O'Reilly},
+  year={2024},
+  url={https://api.semanticscholar.org/CorpusID:270357590}
+}
+```

@@ -76,6 +76,9 @@ def snr_inv_loss_db(y_true, y_pred):
     # Convert inverse SNR to decibels
     snr_inv_db = 10 * tf.math.log(snr_inv) / tf.math.log(10.0) 
 
+    assert not tf.isnan(snr_inv_db)
+    assert not tf.isinf(snr_inv_db)
+
     return snr_inv_db
 
 
@@ -89,10 +92,16 @@ def estimate_parameters(parameter, noise, input_path, pred_path,
     noise_str = str(noise).replace(".", "_")
     fname = f'xarr_noise_{parameter}_{nb_simulations}_{noise_str}.nc'
     dataset = xr.open_dataset(input_path / fname)
+    dataset = dataset.dropna("sim_no")
 
     X = dataset["evoked"].transpose("sim_no", "time", "ch_names")
     X = X.squeeze().to_numpy()
-    y = dataset["parameters"].sel(param=estimated_parameters)
+    y = dataset["parameters"].sel(param=estimated_parameters).to_numpy()
+
+    assert not np.any(np.isnan(X))
+    assert not np.any(np.isinf(X))
+    assert not np.any(np.isnan(y))
+    assert not np.any(np.isinf(y))
 
     scaler = MinMaxScaler()
 

@@ -7,6 +7,32 @@ from copy import copy
 import pandas as pd
 
 
+# Default Parameters from Jansen RIT model
+jr_typical_param = {"A_e": 3.25 * 1e-3,
+              "A_i": 22 * 1e-3,
+              "b_e": 100,
+              "b_i": 50,
+              "C" : 135,
+              "a_1": 1.0,
+              "a_2": 0.8,
+              "a_3": 0.25,
+              "a_4": 0.25,
+              "v_max": 50 * 1e-3,
+              "v_0": 6 * 1e-3}
+
+jr_param_ranges = {
+    'A_e': (2.6 * 1e-3, 9.75 * 1e-3),
+    'A_i': (17.6 * 1e-3, 110.0 * 1e-3),
+    'b_e': (5, 150),
+    'b_i': (25, 75),
+    'C': (65, 1350),
+    'a_1': (0.5, 1.5),
+    'a_2': (0.4, 1.2),
+    'a_3': (0.125, 0.375),
+    'a_4': (0.125, 0.375)
+}
+
+
 class JRSimulationError(RuntimeError):
     def __init__(self, message):            
         # Call the base class constructor with the parameters it needs
@@ -84,19 +110,23 @@ def run_jr_simulation(dt, L, Ii, Ip, p, params):
     Derivatives (y[3], y[4], y[5]): Measured in millivolts per second (mV/s), 
                                     representing the rate of change of the potentials.
     """
+
+    p = copy(jr_typical_param)
+    p.update(params)
+
     nb_samples = len(p)
     y = np.zeros((6, nb_samples))
     # JR Parameters
-    A = params['A_e']
-    B = params['A_i']
-    a = params['b_e']
-    b = params['b_i']
-    C1 = params['a_1']
-    C2 = params['a_2'] 
-    C3 = params['a_3'] 
-    C4 = params['a_4'] 
-    v0 = params['v_0']
-    vm = params['v_max'] 
+    A = p['A_e']
+    B = p['A_i']
+    a = p['b_e']
+    b = p['b_i']
+    C1 = p['a_1']
+    C2 = p['a_2'] 
+    C3 = p['a_3'] 
+    C4 = p['a_4'] 
+    v0 = p['v_0']
+    vm = p['v_max'] 
     r = 0.56  # Need to be defined
     ka = 1  # Need to be defined
     kA = 1  # Need to be defined
@@ -148,7 +178,7 @@ def plot_jr_results(time_axis, results, outputs, points_to_skip):
     return fig, axes
 
 
-def generate_evoked_from_jr(info, fwd, outputs, events, tmin=-0.02,
+def generate_evoked_from_jr(info, fwd, outputs, events, tmin=-0.2,
                             tmax=1, noise_factor=None, noise_cov=None,
                             subject="fsaverage", subjects_dir=None,
                             return_raw=False, verbose=None):

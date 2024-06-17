@@ -494,14 +494,13 @@ class JRSimulator:
             # matrix X by noise factor
             mne.simulation.add_noise(raw, cov=noise_cov,
                                      random_state=seed)
+                
+            signal = np.mean(raw_clean.get_data()**2)
+            noise = np.mean((raw.get_data() - raw_clean.get_data())**2)
+            raw_snr = 10*np.log10(signal/noise)
         else:
-            # Handle invalid noise values
-            print('Function failed generate_evoked_from_jr.. '
-                  'check the noise value')
+            raw_snr = np.nan
 
-        signal = np.mean(raw_clean.get_data()**2)
-        noise = np.mean((raw.get_data() - raw_clean.get_data())**2)
-        raw_snr = 10*np.log10(signal/noise)
         raw.pick('eeg')
 
         annotations = mne.annotations_from_events(self.experiment.events,
@@ -575,7 +574,7 @@ class SimResults:
                                "Pass overwrite==True to overwrite.")
 
     def clean(self):
-        self.dataset = self.dataset.dropna("sim_no")
+        self.dataset = self.dataset.dropna("sim_no", subset=["evoked"])
 
         # Drop outliers
         non_outliers_no = get_non_outliers_sim_no(self.dataset['evoked'])

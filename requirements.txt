@@ -2,3 +2,5 @@ mne>=1.7.0
 numpy>=1.26.4
 pandas>=2.2.2
 scipy>=1.13.0
+tensorflow
+frozendict

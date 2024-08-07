@@ -18,7 +18,7 @@ jr_typical_param = frozendict({
     "A_i": 22 * 1e-3,
     "b_e": 100,
     "b_i": 50,
-    "C" : 135,
+    "C": 135,
     "a_1": 1.0,
     "a_2": 0.8,
     "a_3": 0.25,
@@ -171,8 +171,6 @@ def run_jr_simulation(dt, Ii, Ip, p, params):
     return y
 
 
-
-
 def calculate_mean_std(lo, hi):
     """Calculate mean and standard deviation from the given range."""
     mean = (hi + lo) / 2
@@ -281,12 +279,12 @@ class EventRelatedExp:
         plt.plot(self.time, self.I)
 
     def get_epochs_from_raw(self, raw, tmin=None, tmax=1,
-                            baseline=(None, 0)):
+                            baseline=(None, 0), verbose=None):
         if tmin is None:
             tmin = self.epochs_tmin
 
         return mne.Epochs(raw, self.events, tmin=tmin,
-                          tmax=tmax, baseline=baseline)
+                          tmax=tmax, baseline=baseline, verbose=verbose)
 
     @property
     def nb_samples(self):
@@ -338,9 +336,9 @@ class JRSimulator:
             parameters = apply_C_factor(parameters)
         y = run_jr_simulation(self.dt, experiment.Ii, experiment.Ip,
                               jr_noise, parameters)
-        self.y = y#[:, points_to_skip:]
-        self.time = experiment.time#[points_to_skip:]
-        self.output = (y[1] - y[2])#[points_to_skip:]
+        self.y = y  # [:, points_to_skip:]
+        self.time = experiment.time  # [points_to_skip:]
+        self.output = (y[1] - y[2])  # [points_to_skip:]
 
     def plot_jr_results(self):
         """
@@ -352,13 +350,13 @@ class JRSimulator:
         # Plot each state variable in a separate subplot
         for j, ax, ax_res in zip(range(1, 7), axes, self.y):
             ax.plot(self.time, ax_res)
-            ax.set_ylabel(f'State {j} [mV]')
+            ax.set_ylabel(f'State {j} [V]')
 
         # Output plot on the last subplot
         ax = axes[6]
         ax.plot(self.time, self.output)
         ax.set_xlabel('Time [s]')
-        ax.set_ylabel('Output (v2-v3) [mV]')
+        ax.set_ylabel('Output (y[1]-y[2]) [V]')
 
         fig.tight_layout()
 
@@ -442,6 +440,7 @@ class JRSimulator:
         self.sim_results = SimResults(nb_sims, noise_fact, base_path)
         self.sim_results.make_dataset(evoked_results, snr_db_output,
                                       sampled_values)
+
         if save:
             self.sim_results.save()
 

@@ -18,17 +18,18 @@ class JRInvModel:
 
     def __init__(self, nb_sims, noise_fact=0, path="./",
                  estim_params=('A_e', 'A_i', 'b_e', 'b_i',
-                               'a_1', 'a_2', 'a_3', 'a_4'),
-                 C=135, lift_by=10):
+                               'a_1', 'a_2', 'a_3', 'a_4', 'C'),
+                 lift_by=10):
         self.estim_params = list(estim_params)
-        self.C = C
         self.nb_sims = nb_sims
         self.noise_fact = noise_fact
         if noise_fact:
             if '.' in str(noise_fact):
-                noise_factor = str(noise_fact).replace('.', '_')
-            self.fname_model = f'deepjr_all_{nb_sims}_{noise_factor}.keras'
-            self.fname_scaler = f'scaler_all_{nb_sims}_{noise_factor}.keras'
+                noise_fact_str = str(noise_fact).replace('.', '_')
+            else:
+                noise_fact_str = noise_fact
+            self.fname_model = f'deepjr_all_{nb_sims}_{noise_fact_str}.keras'
+            self.fname_scaler = f'scaler_all_{nb_sims}_{noise_fact_str}.keras'
         else:
             self.fname_model = f'deepjr_all_{nb_sims}.keras'
             self.fname_scaler = f'scaler_all_{nb_sims}.keras'
@@ -53,9 +54,6 @@ class JRInvModel:
         predicted_params = self.model.predict(X_scaled)
         predicted_params = self.scaler.inverse_transform(predicted_params)
         parameters = pd.DataFrame(predicted_params, columns=self.estim_params)
-
-        if "C" not in self.estim_params:
-            parameters["C"] = self.C
         return parameters
 
     def apply_scalings(self, X, y):
@@ -242,7 +240,7 @@ class JRInvModel:
 
             vmin = min(xmin, ymin)
             vmax = max(xmax, ymax)
-            ax.plot([vmin, vmax], [vmin, vmax], color="k", 
+            ax.plot([vmin, vmax], [vmin, vmax], color="k",
                     linestyle="dashed", alpha=0.5)
 
 

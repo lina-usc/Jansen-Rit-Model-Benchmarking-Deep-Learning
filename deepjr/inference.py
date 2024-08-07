@@ -191,7 +191,8 @@ class JRInvModel:
         self.prepare_data()
 
         # Create the LSTM model
-        self.model = create_bi_lstm_model(input_shape=self.X_train.shape[1:])
+        self.model = create_bi_lstm_model(input_shape=self.X_train.shape[1:],
+                                          dense_units=self.y_train.shape[1])
 
         early_stop = EarlyStopping(
             monitor='val_loss',    # Monitor validation loss

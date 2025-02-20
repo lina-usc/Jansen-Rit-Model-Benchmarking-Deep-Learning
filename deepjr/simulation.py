@@ -445,79 +445,124 @@ class JRSimulator:
             self.sim_results.save()
 
     def compute_raw_from_output(self, output,
-                                target_region="caudalmiddlefrontal-lh",
-                                location="center", extent=10.0, gain=1e-6,
-                                seed=0, noise_fact=None,
-                                verbose=None):
+                            target_region="caudalmiddlefrontal-lh",
+                            location="center", extent=10.0, gain=1e-6,
+                            seed=0, noise_fact=None,
+                            verbose=None):
         """
-        location: Use the center of the region as a seed.
-        extent: Extent in mm of the region.
-        """
+        Compute raw EEG from the simulated Jansen–Rit output signal.
 
-        # select a region to activate, we use the caudal middle frontal to grow
-        # a region of interest.
+        Parameters:
+        output       : array-like
+                        The simulated output time series from the model.
+        target_region: str (default "caudalmiddlefrontal-lh")
+                        Regular expression to select a label from subject annotation.
+        location     : str (default "center")
+                        The location criteria used for selecting the source region.
+        extent       : float (default 10.0)
+                        The spatial extent in mm for the source selection.
+        gain         : float (default 1e-6)
+                        Scaling factor to apply to the output before projection.
+        seed         : int (default 0)
+                        Random seed for noise generation.
+        noise_fact   : float or None (default None)
+                        Scaling factor for the noise; if None, no noise is added.
+        verbose      : bool or None
+                        Verbosity flag.
+
+        Returns:
+        raw    : mne.io.Raw
+                The simulated raw EEG data with sensor projections.
+        raw_snr: float
+                The computed signal-to-noise ratio in dB.
+
+        Notes:
+        - A dummy event with onset at 0 is used in the source simulator. Adjust if you want a more
+            accurate mapping between the simulation and experiment events.
+        - The experiment's events (self.experiment.events) are used to annotate the raw data.
+        """
+        # Ensure experiment events are available
+        if not hasattr(self, "experiment"):
+            raise RuntimeError("self.experiment is not defined. Cannot compute raw data without experiment events.")
+
+        # Select a label from the subject annotation matching the target region.
         label_kwargs = dict(regexp=target_region,
                             subjects_dir=self.subjects_dir,
                             verbose=verbose)
-        selected_label = mne.read_labels_from_annot(self.subject,
-                                                    **label_kwargs)[0]
+        labels = mne.read_labels_from_annot(self.subject, **label_kwargs)
+        if len(labels) == 0:
+            raise RuntimeError(f"No labels found for target region: {target_region}")
+        selected_label = labels[0]
 
+        # Refine the label to select sources based on the location and extent.
         label = mne.label.select_sources(self.subject, selected_label,
-                                         location=location, extent=extent)
+                                        location=location, extent=extent)
 
-        # Create simulated source activity. Here we use a SourceSimulator whose
-        # add_data method is key. It specified where (label), what
-        # (source_time_series), and when (events) an event type will occur.
+        # Create a more meaningful event for the source simulator if needed.
+        # For now, we use a dummy event with onset at 0.
+        event_for_source = [[0, 0, 0]]
 
-        source_simulator = SourceSimulator(self.fwd["src"],
-                                           tstep=self.dt)
-        source_simulator.add_data(label,
-                                  gain*np.array(output),
-                                  [[0, 0, 0]])
+        # Create the SourceSimulator with the proper time step.
+        source_simulator = SourceSimulator(self.fwd["src"], tstep=self.dt)
+        # Ensure output is a numpy array.
+        output = np.asarray(output)
+        source_simulator.add_data(label, gain * output, event_for_source)
 
-        # Project the source time series to sensor space and add some noise.
-        # The source simulator can be given directly to the simulate_raw
-        # function.
+        # Simulate raw EEG from the source activity using the forward model.
         raw = mne.simulation.simulate_raw(self.info, source_simulator,
-                                          forward=self.fwd,
-                                          verbose=verbose)
-
+                                        forward=self.fwd,
+                                        verbose=verbose)
         raw.set_eeg_reference(projection=True, verbose=verbose)
 
+        # Keep a clean copy for SNR estimation.
         raw_clean = raw.copy()
 
+        # If a noise factor is provided, add noise and compute SNR.
         if noise_fact:
             noise_cov = self.noise_cov.copy()
             noise_cov['data'] = noise_cov.data * noise_fact
-            # Add noise using the provided noise covariance
-            # matrix X by noise factor
-            mne.simulation.add_noise(raw, cov=noise_cov,
-                                     random_state=seed)
-                
-            signal = np.mean(raw_clean.get_data()**2)
-            noise = np.mean((raw.get_data() - raw_clean.get_data())**2)
-            raw_snr = 10*np.log10(signal/noise)
+            mne.simulation.add_noise(raw, cov=noise_cov, random_state=seed)
+
+            signal_power = np.mean(raw_clean.get_data()**2)
+            noise_power = np.mean((raw.get_data() - raw_clean.get_data())**2)
+            raw_snr = 10 * np.log10(signal_power / noise_power)
         else:
             raw_snr = np.nan
 
+        # Keep only EEG channels.
         raw.pick('eeg')
 
+        # Create annotations from the experiment events.
         annotations = mne.annotations_from_events(self.experiment.events,
-                                                  self.info["sfreq"],
-                                                  {0: "stim"},
-                                                  verbose=False)
-        raw.set_annotations(annotations, verbose=False)
+                                                self.info["sfreq"],
+                                                {0: "stim"},
+                                                verbose=verbose)
+        raw.set_annotations(annotations, verbose=verbose)
 
         return raw, raw_snr
 
     def generate_raw(self, **kwargs):
         """
-        location: Use the center of the region as a seed.
-        extent: Extent in mm of the region.
-        """
+        Generate a simulated raw EEG object from the Jansen–Rit model output.
 
-        self.raw, self.raw_snr = self.compute_raw_from_output(self.output,
-                                                              **kwargs)
+        Keyword Args:
+        location: (str) Source selection location for the label (default "center").
+        extent: (float) Extent in mm for selecting sources within the label (default 10.0).
+        gain: (float) Scaling gain applied to the simulated output (default 1e-6).
+        seed: (int) Random seed for noise generation (default 0).
+        noise_fact: (float) Factor for scaling the added noise (if None, no noise is added).
+        verbose: (bool or None) Verbosity flag.
+
+        Requirements:
+        - self.output must be computed (the simulated time series).
+        - self.experiment must be defined (used for annotation events).
+
+        Returns:
+        Sets self.raw (an MNE Raw object) and self.raw_snr (the computed SNR in dB).
+        """
+        if not hasattr(self, "experiment"):
+            raise RuntimeError("Experiment not defined. Set self.experiment before generating raw data.")
+        self.raw, self.raw_snr = self.compute_raw_from_output(self.output, **kwargs)
 
     def generate_evoked(self, experiment, **epoching_kwargs):
         self.epochs = experiment.get_epochs_from_raw(self.raw,

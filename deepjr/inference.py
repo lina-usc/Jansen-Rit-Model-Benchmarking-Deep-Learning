@@ -10,7 +10,6 @@ from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
 import scipy.stats
 import seaborn as sns
-
 from deepjr.simulation import SimResults
 
 
@@ -279,3 +278,4 @@ def snr_inv_loss_db(y_true, y_pred):
     snr_inv_db = 10 * tf.math.log(snr_inv) / tf.math.log(10.0)
 
     return snr_inv_db
+

@@ -1,0 +1,4 @@
+deepjr.egg-info
+deepjr.egg-info/*
+deepjr/__pycache__
+deepjr/__pycache__/*
